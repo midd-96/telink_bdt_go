@@ -89,41 +89,43 @@ func initDevice(device int) {
 
 func main() {
 	args := os.Args
-	if len(args) < 2 {
-		fmt.Println("Usage: go run main.go <device_index>")
-		return
-	}
-
 	deviceIndex := 0
-	fmt.Sscanf(args[1], "%d", &deviceIndex)
 
-	initDevice(deviceIndex)
+	switch args[1] {
+	case "-r":
+		fmt.Println("Reseting:")
+		initDevice(deviceIndex)
 
-	if utils.EraseInit() {
-		fmt.Println("TC32 EVK : Swire OK")
+	case "-e":
+		fmt.Println("Erasing:")
+		if utils.EraseInit() {
+			fmt.Println("TC32 EVK : Swire OK")
+		}
+
+		firmwareSize := 2048 // 524288/16
+		barLen := 50
+
+		for i := 0; i < firmwareSize; i += 16 {
+			// Placeholder for the eraseAdr function in Go under td package
+			utils.EraseAdr(i)
+
+			hexValue := fmt.Sprintf("%x", i*0x100)
+			fmt.Println("hexValue  : ", hexValue)
+			firmwareAddr := i
+
+			percent := (firmwareAddr * 100) / (firmwareSize - 16)
+
+			barProgress := strings.Repeat("#", percent*barLen/100)
+			barRemaining := strings.Repeat("=", barLen-(percent*barLen/100))
+
+			fmt.Printf("\r%d%% [\033[3;91m%s\033[0m%s]0x%05x", percent, barProgress, barRemaining, firmwareAddr*256)
+			time.Sleep(50 * time.Millisecond) // Simulate the delay as in Python code
+		}
+	case "-h":
+		fmt.Println("____________Help____________\n-h for Help\n-r for Reset\n-e for Erase")
+
+	default:
+		fmt.Println("Invalid option \n use 'go run main.go -h' for help")
+
 	}
-
-	fmt.Println("Erasing:")
-
-	firmwareSize := 2048 // 524288/16
-	barLen := 50
-
-	for i := 0; i < firmwareSize; i += 16 {
-		// Placeholder for the eraseAdr function in Go under td package
-		utils.EraseAdr(i)
-
-		hexValue := fmt.Sprintf("%x", i*0x100)
-		fmt.Println("hexValue  : ", hexValue)
-		firmwareAddr := i
-
-		percent := (firmwareAddr * 100) / (firmwareSize - 16)
-
-		barProgress := strings.Repeat("#", percent*barLen/100)
-		barRemaining := strings.Repeat("=", barLen-(percent*barLen/100))
-
-		fmt.Printf("\r%d%% [\033[3;91m%s\033[0m%s]0x%05x", percent, barProgress, barRemaining, firmwareAddr*256)
-		time.Sleep(50 * time.Millisecond) // Simulate the delay as in Python code
-	}
-
-	// fmt.Println("\n")
 }
