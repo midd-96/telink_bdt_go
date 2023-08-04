@@ -58,7 +58,7 @@ func driverInit(device int) {
 		return
 	}
 
-	outEndpoint, err := intf.OutEndpoint(0x88) // Replacd 0x01 with the endpoint address with 0x88
+	outEndpoint, err := intf.OutEndpoint(0x05) // Replacd 0x01 with the endpoint address with 0x88
 	if err != nil {
 		fmt.Println("Error --- : ", err)
 	}
@@ -107,25 +107,27 @@ func main() {
 		if utils.EraseInit() {
 			fmt.Println("TC32 EVK : Swire OK")
 		}
+		var test bool = false
+		if !test {
+			firmwareSize := 2048 // 524288/16
+			barLen := 50
 
-		firmwareSize := 2048 // 524288/16
-		barLen := 50
+			for i := 0; i < firmwareSize; i += 16 {
+				// Placeholder for the eraseAdr function in Go under td package
+				utils.EraseAdr(i)
 
-		for i := 0; i < firmwareSize; i += 16 {
-			// Placeholder for the eraseAdr function in Go under td package
-			utils.EraseAdr(i)
+				// hexValue := fmt.Sprintf("%x", i*0x100)
+				// fmt.Println("hexValue  : ", hexValue)
+				firmwareAddr := i
 
-			hexValue := fmt.Sprintf("%x", i*0x100)
-			fmt.Println("hexValue  : ", hexValue)
-			firmwareAddr := i
+				percent := (firmwareAddr * 100) / (firmwareSize - 16)
 
-			percent := (firmwareAddr * 100) / (firmwareSize - 16)
+				barProgress := strings.Repeat("#", percent*barLen/100)
+				barRemaining := strings.Repeat("=", barLen-(percent*barLen/100))
 
-			barProgress := strings.Repeat("#", percent*barLen/100)
-			barRemaining := strings.Repeat("=", barLen-(percent*barLen/100))
-
-			fmt.Printf("\r%d%% [\033[3;91m%s\033[0m%s]0x%05x", percent, barProgress, barRemaining, firmwareAddr*256)
-			time.Sleep(50 * time.Millisecond) // Simulate the delay as in Python code
+				fmt.Printf("\r%d%% [\033[3;91m%s\033[0m%s]0x%05x", percent, barProgress, barRemaining, firmwareAddr*256)
+				time.Sleep(50 * time.Millisecond) // Simulate the delay as in Python code
+			}
 		}
 	case "-h":
 		fmt.Println("____________Help____________\n-h for Help\n-r for Reset\n-e for Erase")
