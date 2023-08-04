@@ -96,6 +96,12 @@ func main() {
 		fmt.Println("Reseting:")
 		initDevice(deviceIndex)
 
+		if !utils.Reset() {
+			fmt.Println("Reset Error")
+			return
+		}
+		fmt.Println("Reset OK!")
+
 	case "-e":
 		fmt.Println("Erasing:")
 		if utils.EraseInit() {
