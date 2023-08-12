@@ -90,13 +90,13 @@ func initDevice(device int) {
 func main() {
 	args := os.Args
 	deviceIndex := 0
+	initDevice(deviceIndex)
 
 	switch args[1] {
 	case "-r":
 		fmt.Println("Reseting:")
-		initDevice(deviceIndex)
 
-		if !utils.Reset() {
+		if !utils.Reset(dev) {
 			fmt.Println("Reset Error")
 			return
 		}
@@ -104,7 +104,7 @@ func main() {
 
 	case "-e":
 		fmt.Println("Erasing:")
-		if utils.EraseInit() {
+		if utils.EraseInit(dev) {
 			fmt.Println("TC32 EVK : Swire OK")
 		}
 		var test bool = false
@@ -114,7 +114,7 @@ func main() {
 
 			for i := 0; i < firmwareSize; i += 16 {
 				// Placeholder for the eraseAdr function in Go under td package
-				utils.EraseAdr(i)
+				utils.EraseAdr(i, dev)
 
 				// hexValue := fmt.Sprintf("%x", i*0x100)
 				// fmt.Println("hexValue  : ", hexValue)
@@ -129,6 +129,81 @@ func main() {
 				time.Sleep(50 * time.Millisecond) // Simulate the delay as in Python code
 			}
 		}
+
+	case "-f":
+		fileName := args[2]
+		fmt.Println("firmware file : ", fileName)
+
+		fo, err := os.Open(fileName)
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			return
+		}
+		defer fo.Close()
+
+		firmwareAddr := 0
+		fileInfo, err := fo.Stat()
+		if err != nil {
+			fmt.Println("Error getting file info:", err)
+			return
+		}
+		firmwareSize := int(fileInfo.Size())
+
+		if firmwareSize > 0x80000 {
+			fmt.Println("\033[3;31mFirmware Too BIG!\033[0m")
+			return
+		}
+
+		barLen := 50
+
+		status := utils.DownloadInit(dev)
+		if !status {
+			fmt.Println("Error in DownloadInit")
+			return
+		}
+
+		fmt.Println("Flashing: ")
+
+		for {
+			if firmwareAddr%4096 == 0 {
+				status = utils.Download_Block_Init((firmwareAddr / 256), dev)
+				if !status {
+					fmt.Println("Error in Download_Block_Init")
+					return
+				}
+			}
+
+			data := make([]byte, 256)
+			if len(data) < 1 {
+				break
+			}
+
+			adr, err := fo.Read(data)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+
+			status = utils.Download_Adr(adr, dev)
+			if !status {
+				fmt.Println("Error in Download_Adr")
+				return
+			}
+
+			firmwareAddr += len(data)
+
+			percent := int(float64(firmwareAddr) * 100 / float64(firmwareSize))
+			fmt.Printf("\r%d%% [\033[3;32m%s\033[0m%s]0x%05x", percent, strings.Repeat("#", percent*barLen/100), strings.Repeat("=", barLen-percent*barLen/100), firmwareAddr)
+		}
+
+		status = utils.Download_End(dev)
+		if !status {
+			fmt.Println("Error in Download_End")
+			return
+		}
+
+		fmt.Println("")
+
 	case "-h":
 		fmt.Println("____________Help____________\n-h for Help\n-r for Reset\n-e for Erase")
 
